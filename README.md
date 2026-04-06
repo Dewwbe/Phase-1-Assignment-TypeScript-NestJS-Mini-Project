@@ -1,18 +1,18 @@
 🚀 User Management API
 
-A clean, production-style REST API built with NestJS and TypeScript, designed to demonstrate strong backend fundamentals including validation, modular architecture, and maintainable code practices.
+A clean and scalable REST API built with NestJS and TypeScript, demonstrating strong backend fundamentals, validation, and clean architecture.
 
 📌 Overview
 
-This project implements a User Management system with full CRUD functionality, structured using NestJS best practices.
+This project implements a User Management system with full CRUD functionality.
 
-It focuses on:
+It is designed to showcase:
 
-Strong TypeScript usage (strict mode, no any)
-Clean architecture (controllers → services → DTOs)
-Input validation using DTOs
+Strong TypeScript practices (strict mode, no any)
+Clean architecture (Controller → Service → DTO)
+Validation using DTOs
+Centralized error handling
 Consistent API response structure
-Error handling using global filters
 API documentation with Swagger
 🛠 Tech Stack
 Framework: NestJS
@@ -49,9 +49,9 @@ npm install
 3. Install required packages
 npm install class-validator class-transformer @nestjs/mapped-types @nestjs/swagger swagger-ui-express
 ▶️ Running the Application
-Development mode
+Development
 npm run start:dev
-Production build
+Production
 npm run build
 npm run start
 🌐 Application URLs
@@ -73,7 +73,7 @@ POST /users
 GET /users
 🔍 Get User by ID
 GET /users/:id
-✏️ Update User (Partial)
+✏️ Update User
 PATCH /users/:id
 {
   "firstName": "Updated Name",
@@ -81,7 +81,7 @@ PATCH /users/:id
 }
 ❌ Delete User
 DELETE /users/:id
-📦 Sample API Response
+📦 Sample Success Response
 {
   "success": true,
   "message": "User created successfully",
@@ -101,9 +101,9 @@ Field	Rule
 firstName	string, min length 2
 lastName	string, min length 2
 email	valid email
-age	integer, minimum 18
+age	integer, min 18
 isActive	optional boolean
-🧪 Testing with Postman
+🧪 Testing (Postman)
 Base URL
 http://localhost:3000
 Example: Create User
@@ -118,7 +118,7 @@ Body → raw → JSON
 }
 ❗ Error Handling
 
-The application uses a global exception filter to standardize error responses.
+A global exception filter ensures consistent error responses.
 
 Example Error Response
 {
@@ -131,33 +131,32 @@ Example Error Response
   "path": "/users"
 }
 🧠 Design Principles
-✅ Thin controllers (no business logic)
-✅ Service layer handles all logic
-✅ DTO-based validation
-✅ Strict TypeScript (no any)
-✅ Clear separation of concerns
-✅ Consistent API response format
+Thin controllers (no business logic)
+Service layer handles all logic
+DTO-based validation
+Strict TypeScript (no any)
+Separation of concerns
+Consistent response format
 ⚠️ Limitations
 In-memory data storage (no database)
 Data resets on server restart
 No authentication or authorization
 🚧 Future Improvements
-Add PostgreSQL with Prisma
-Add authentication (JWT)
-Add pagination & filtering
-Add unit & e2e tests
-Add environment config (.env)
-Dockerize application
+PostgreSQL + Prisma integration
+JWT authentication
+Pagination & filtering
+Unit & e2e testing
+Environment configuration
+Docker support
 🔗 Development Workflow
 Start server
 Open Swagger UI
 Test endpoints via Swagger or Postman
-Validate edge cases (invalid input, duplicate email, etc.)
+Validate edge cases
 👨‍💻 Author
 
 Built as part of a TypeScript + NestJS backend learning project.
 
 ⭐ Notes
 
-This project is intentionally designed to emphasize clean backend practices rather than complexity.
-It serves as a strong foundation for scaling into production-grade systems.
+This project emphasizes clean backend practices and strong TypeScript fundamentals, making it a solid base for production-grade systems.
