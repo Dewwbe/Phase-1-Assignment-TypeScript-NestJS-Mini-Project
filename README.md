@@ -6,14 +6,14 @@ A clean and scalable REST API built with NestJS and TypeScript, demonstrating st
 
 This project implements a User Management system with full CRUD functionality.
 
-It is designed to showcase:
+It demonstrates:
 
 Strong TypeScript practices (strict mode, no any)
 Clean architecture (Controller → Service → DTO)
-Validation using DTOs
+DTO-based validation
 Centralized error handling
 Consistent API response structure
-API documentation with Swagger
+Swagger API documentation
 🛠 Tech Stack
 Framework: NestJS
 Language: TypeScript (strict mode)
@@ -62,6 +62,7 @@ Swagger UI	http://localhost:3000/api
 📬 API Endpoints
 ➕ Create User
 POST /users
+Request Body
 {
   "firstName": "Alice",
   "lastName": "Perera",
@@ -75,6 +76,7 @@ GET /users
 GET /users/:id
 ✏️ Update User
 PATCH /users/:id
+Request Body
 {
   "firstName": "Updated Name",
   "isActive": false
@@ -101,15 +103,15 @@ Field	Rule
 firstName	string, min length 2
 lastName	string, min length 2
 email	valid email
-age	integer, min 18
+age	integer, minimum 18
 isActive	optional boolean
-🧪 Testing (Postman)
+🧪 Testing with Postman
 Base URL
 http://localhost:3000
-Example: Create User
-Method: POST
-URL: /users
-Body → raw → JSON
+Example Request
+
+POST /users
+
 {
   "firstName": "John",
   "lastName": "Doe",
@@ -132,11 +134,11 @@ Example Error Response
 }
 🧠 Design Principles
 Thin controllers (no business logic)
-Service layer handles all logic
+Service layer handles logic
 DTO-based validation
 Strict TypeScript (no any)
-Separation of concerns
-Consistent response format
+Clear separation of concerns
+Consistent API response format
 ⚠️ Limitations
 In-memory data storage (no database)
 Data resets on server restart
@@ -149,9 +151,9 @@ Unit & e2e testing
 Environment configuration
 Docker support
 🔗 Development Workflow
-Start server
+Start the server
 Open Swagger UI
-Test endpoints via Swagger or Postman
+Test endpoints using Swagger or Postman
 Validate edge cases
 👨‍💻 Author
 
@@ -159,4 +161,4 @@ Built as part of a TypeScript + NestJS backend learning project.
 
 ⭐ Notes
 
-This project emphasizes clean backend practices and strong TypeScript fundamentals, making it a solid base for production-grade systems.
+This project focuses on clean backend practices and strong TypeScript fundamentals, making it a solid base for production-grade systems.
