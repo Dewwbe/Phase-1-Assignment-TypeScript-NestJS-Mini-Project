@@ -14,7 +14,7 @@ let UsersService = class UsersService {
         this.users = [];
     }
     create(createUserDto) {
-        const existingUser = this.users.find((user) => user.email === createUserDto.email);
+        const existingUser = this.users.find((user) => user.email.toLowerCase() === createUserDto.email.toLowerCase());
         if (existingUser) {
             throw new common_1.BadRequestException('Email already exists');
         }
@@ -23,7 +23,7 @@ let UsersService = class UsersService {
             id: (0, crypto_1.randomUUID)(),
             firstName: createUserDto.firstName,
             lastName: createUserDto.lastName,
-            email: createUserDto.email,
+            email: createUserDto.email.toLowerCase(),
             age: createUserDto.age,
             isActive: createUserDto.isActive ?? true,
             createdAt: now,
@@ -34,6 +34,46 @@ let UsersService = class UsersService {
     }
     findAll() {
         return this.users;
+    }
+    findOne(id) {
+        const user = this.users.find((existingUser) => existingUser.id === id);
+        if (!user) {
+            throw new common_1.NotFoundException(`User with id "${id}" not found`);
+        }
+        return user;
+    }
+    update(id, updateUserDto) {
+        const user = this.findOne(id);
+        if (updateUserDto.email !== undefined &&
+            this.users.some((existingUser) => existingUser.email.toLowerCase() === updateUserDto.email.toLowerCase() &&
+                existingUser.id !== id)) {
+            throw new common_1.BadRequestException('Email already exists');
+        }
+        if (updateUserDto.firstName !== undefined) {
+            user.firstName = updateUserDto.firstName;
+        }
+        if (updateUserDto.lastName !== undefined) {
+            user.lastName = updateUserDto.lastName;
+        }
+        if (updateUserDto.email !== undefined) {
+            user.email = updateUserDto.email.toLowerCase();
+        }
+        if (updateUserDto.age !== undefined) {
+            user.age = updateUserDto.age;
+        }
+        if (updateUserDto.isActive !== undefined) {
+            user.isActive = updateUserDto.isActive;
+        }
+        user.updatedAt = new Date();
+        return user;
+    }
+    remove(id) {
+        const userIndex = this.users.findIndex((existingUser) => existingUser.id === id);
+        if (userIndex === -1) {
+            throw new common_1.NotFoundException(`User with id "${id}" not found`);
+        }
+        const [deletedUser] = this.users.splice(userIndex, 1);
+        return deletedUser;
     }
 };
 exports.UsersService = UsersService;

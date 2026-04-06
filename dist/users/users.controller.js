@@ -15,16 +15,51 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersController = void 0;
 const common_1 = require("@nestjs/common");
 const create_user_dto_1 = require("./dto/create-user.dto");
+const update_user_dto_1 = require("./dto/update-user.dto");
 const users_service_1 = require("./users.service");
 let UsersController = class UsersController {
     constructor(usersService) {
         this.usersService = usersService;
     }
     create(createUserDto) {
-        return this.usersService.create(createUserDto);
+        const user = this.usersService.create(createUserDto);
+        return {
+            success: true,
+            message: 'User created successfully',
+            data: user,
+        };
     }
     findAll() {
-        return this.usersService.findAll();
+        const users = this.usersService.findAll();
+        return {
+            success: true,
+            message: 'Users retrieved successfully',
+            data: users,
+        };
+    }
+    findOne(id) {
+        const user = this.usersService.findOne(id);
+        return {
+            success: true,
+            message: 'User retrieved successfully',
+            data: user,
+        };
+    }
+    update(id, updateUserDto) {
+        const updatedUser = this.usersService.update(id, updateUserDto);
+        return {
+            success: true,
+            message: 'User updated successfully',
+            data: updatedUser,
+        };
+    }
+    remove(id) {
+        const deletedUser = this.usersService.remove(id);
+        return {
+            success: true,
+            message: 'User deleted successfully',
+            data: deletedUser,
+        };
     }
 };
 exports.UsersController = UsersController;
@@ -39,8 +74,30 @@ __decorate([
     (0, common_1.Get)(),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", Array)
+    __metadata("design:returntype", Object)
 ], UsersController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Object)
+], UsersController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, update_user_dto_1.UpdateUserDto]),
+    __metadata("design:returntype", Object)
+], UsersController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Object)
+], UsersController.prototype, "remove", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
     __metadata("design:paramtypes", [users_service_1.UsersService])
