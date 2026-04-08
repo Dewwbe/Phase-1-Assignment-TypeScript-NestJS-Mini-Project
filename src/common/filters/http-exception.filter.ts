@@ -37,10 +37,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         exceptionResponse !== null &&
         'message' in exceptionResponse
       ) {
-        const extractedMessage = (
-          exceptionResponse as { message: string | string[] }
-        ).message;
-        message = extractedMessage;
+        message = (exceptionResponse as { message: string | string[] }).message;
       } else if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
       }

@@ -14,7 +14,8 @@ let UsersService = class UsersService {
         this.users = [];
     }
     create(createUserDto) {
-        const existingUser = this.users.find((user) => user.email.toLowerCase() === createUserDto.email.toLowerCase());
+        const normalizedEmail = createUserDto.email.toLowerCase();
+        const existingUser = this.users.find((user) => user.email === normalizedEmail);
         if (existingUser) {
             throw new common_1.BadRequestException('Email already exists');
         }
@@ -23,7 +24,7 @@ let UsersService = class UsersService {
             id: (0, crypto_1.randomUUID)(),
             firstName: createUserDto.firstName,
             lastName: createUserDto.lastName,
-            email: createUserDto.email.toLowerCase(),
+            email: normalizedEmail,
             age: createUserDto.age,
             isActive: createUserDto.isActive ?? true,
             createdAt: now,
@@ -32,8 +33,10 @@ let UsersService = class UsersService {
         this.users.push(newUser);
         return newUser;
     }
-    findAll() {
-        return this.users;
+    findAll(page = 1, limit = 10) {
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        return this.users.slice(startIndex, endIndex);
     }
     findOne(id) {
         const user = this.users.find((existingUser) => existingUser.id === id);
@@ -44,36 +47,25 @@ let UsersService = class UsersService {
     }
     update(id, updateUserDto) {
         const user = this.findOne(id);
-        if (updateUserDto.email !== undefined &&
-            this.users.some((existingUser) => existingUser.email.toLowerCase() === updateUserDto.email.toLowerCase() &&
-                existingUser.id !== id)) {
-            throw new common_1.BadRequestException('Email already exists');
-        }
-        if (updateUserDto.firstName !== undefined) {
-            user.firstName = updateUserDto.firstName;
-        }
-        if (updateUserDto.lastName !== undefined) {
-            user.lastName = updateUserDto.lastName;
-        }
         if (updateUserDto.email !== undefined) {
-            user.email = updateUserDto.email.toLowerCase();
+            const normalizedEmail = updateUserDto.email.toLowerCase();
+            const emailTaken = this.users.some((existingUser) => existingUser.email === normalizedEmail && existingUser.id !== id);
+            if (emailTaken) {
+                throw new common_1.BadRequestException('Email already exists');
+            }
+            updateUserDto.email = normalizedEmail;
         }
-        if (updateUserDto.age !== undefined) {
-            user.age = updateUserDto.age;
-        }
-        if (updateUserDto.isActive !== undefined) {
-            user.isActive = updateUserDto.isActive;
-        }
-        user.updatedAt = new Date();
+        Object.assign(user, {
+            ...updateUserDto,
+            updatedAt: new Date(),
+        });
         return user;
     }
     remove(id) {
-        const userIndex = this.users.findIndex((existingUser) => existingUser.id === id);
-        if (userIndex === -1) {
-            throw new common_1.NotFoundException(`User with id "${id}" not found`);
-        }
-        const [deletedUser] = this.users.splice(userIndex, 1);
-        return deletedUser;
+        const user = this.findOne(id);
+        const userIndex = this.users.findIndex((existingUser) => existingUser.id === user.id);
+        this.users.splice(userIndex, 1);
+        return user;
     }
 };
 exports.UsersService = UsersService;

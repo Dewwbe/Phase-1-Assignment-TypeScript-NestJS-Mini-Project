@@ -13,8 +13,10 @@ export class UsersService {
   private readonly users: User[] = [];
 
   create(createUserDto: CreateUserDto): User {
+    const normalizedEmail = createUserDto.email.toLowerCase();
+
     const existingUser = this.users.find(
-      (user: User) => user.email.toLowerCase() === createUserDto.email.toLowerCase(),
+      (user: User) => user.email === normalizedEmail,
     );
 
     if (existingUser) {
@@ -27,7 +29,7 @@ export class UsersService {
       id: randomUUID(),
       firstName: createUserDto.firstName,
       lastName: createUserDto.lastName,
-      email: createUserDto.email.toLowerCase(),
+      email: normalizedEmail,
       age: createUserDto.age,
       isActive: createUserDto.isActive ?? true,
       createdAt: now,
@@ -39,12 +41,17 @@ export class UsersService {
     return newUser;
   }
 
-  findAll(): User[] {
-    return this.users;
+  findAll(page = 1, limit = 10): User[] {
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+
+    return this.users.slice(startIndex, endIndex);
   }
 
   findOne(id: string): User {
-    const user = this.users.find((existingUser: User) => existingUser.id === id);
+    const user = this.users.find(
+      (existingUser: User) => existingUser.id === id,
+    );
 
     if (!user) {
       throw new NotFoundException(`User with id "${id}" not found`);
@@ -56,52 +63,38 @@ export class UsersService {
   update(id: string, updateUserDto: UpdateUserDto): User {
     const user = this.findOne(id);
 
-    if (
-      updateUserDto.email !== undefined &&
-      this.users.some(
-        (existingUser: User) =>
-          existingUser.email.toLowerCase() === updateUserDto.email!.toLowerCase() &&
-          existingUser.id !== id,
-      )
-    ) {
-      throw new BadRequestException('Email already exists');
-    }
-
-    if (updateUserDto.firstName !== undefined) {
-      user.firstName = updateUserDto.firstName;
-    }
-
-    if (updateUserDto.lastName !== undefined) {
-      user.lastName = updateUserDto.lastName;
-    }
-
     if (updateUserDto.email !== undefined) {
-      user.email = updateUserDto.email.toLowerCase();
+      const normalizedEmail = updateUserDto.email.toLowerCase();
+
+      const emailTaken = this.users.some(
+        (existingUser: User) =>
+          existingUser.email === normalizedEmail && existingUser.id !== id,
+      );
+
+      if (emailTaken) {
+        throw new BadRequestException('Email already exists');
+      }
+
+      updateUserDto.email = normalizedEmail;
     }
 
-    if (updateUserDto.age !== undefined) {
-      user.age = updateUserDto.age;
-    }
-
-    if (updateUserDto.isActive !== undefined) {
-      user.isActive = updateUserDto.isActive;
-    }
-
-    user.updatedAt = new Date();
+    Object.assign(user, {
+      ...updateUserDto,
+      updatedAt: new Date(),
+    });
 
     return user;
   }
 
   remove(id: string): User {
+    const user = this.findOne(id);
+
     const userIndex = this.users.findIndex(
-      (existingUser: User) => existingUser.id === id,
+      (existingUser: User) => existingUser.id === user.id,
     );
 
-    if (userIndex === -1) {
-      throw new NotFoundException(`User with id "${id}" not found`);
-    }
+    this.users.splice(userIndex, 1);
 
-    const [deletedUser] = this.users.splice(userIndex, 1);
-    return deletedUser;
+    return user;
   }
 }

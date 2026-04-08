@@ -7,7 +7,7 @@ export declare class UsersController {
     private readonly usersService;
     constructor(usersService: UsersService);
     create(createUserDto: CreateUserDto): ApiResponse<User>;
-    findAll(): ApiResponse<User[]>;
+    findAll(page: number, limit: number): ApiResponse<User[]>;
     findOne(id: string): ApiResponse<User>;
     update(id: string, updateUserDto: UpdateUserDto): ApiResponse<User>;
     remove(id: string): ApiResponse<User>;
