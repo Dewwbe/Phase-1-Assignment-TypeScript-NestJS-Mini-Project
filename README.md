@@ -1,6 +1,6 @@
 # 🚀 User Management API
 
-A clean and scalable REST API built with **NestJS** and **TypeScript**, demonstrating strong backend fundamentals, validation, and clean architecture.
+A clean, scalable REST API built with **NestJS** and **TypeScript**, demonstrating strong backend fundamentals, validation, and clean architecture.
 
 ---
 
@@ -8,7 +8,7 @@ A clean and scalable REST API built with **NestJS** and **TypeScript**, demonstr
 
 This project implements a **User Management system** with full CRUD functionality.
 
-It demonstrates:
+### Key Features
 
 - ✅ Strong TypeScript practices (strict mode, no `any`)
 - ✅ Clean architecture (Controller → Service → DTO)
@@ -16,6 +16,10 @@ It demonstrates:
 - ✅ Centralized error handling
 - ✅ Consistent API response structure
 - ✅ Swagger API documentation
+- ✅ Pagination support
+- ✅ UUID validation
+- ✅ Environment configuration
+- ✅ Unit & E2E testing
 
 ---
 
@@ -27,6 +31,8 @@ It demonstrates:
 | Language | TypeScript (strict mode) |
 | Validation | class-validator, class-transformer |
 | Documentation | Swagger |
+| Config | @nestjs/config |
+| Testing | Jest, Supertest |
 | Runtime | Node.js |
 
 ---
@@ -51,6 +57,13 @@ src/
     ├── users.controller.ts
     ├── users.service.ts
     └── users.module.ts
+
+test/
+├── app.e2e-spec.ts
+└── users.service.spec.ts
+
+.env.example
+.gitignore
 ```
 
 ---
@@ -73,8 +86,22 @@ npm install
 **3. Install required packages**
 
 ```bash
-npm install class-validator class-transformer @nestjs/mapped-types @nestjs/swagger swagger-ui-express
+npm install class-validator class-transformer @nestjs/swagger swagger-ui-express @nestjs/config
 ```
+
+---
+
+## 🔐 Environment Variables
+
+Create a `.env` file in the root directory:
+
+```env
+PORT=3000
+```
+
+A sample file is provided as `.env.example`.
+
+> ⚠️ Do not commit `.env` to Git (already ignored via `.gitignore`)
 
 ---
 
@@ -122,11 +149,18 @@ POST /users
 }
 ```
 
-### 📥 Get All Users
+### 📥 Get All Users (with Pagination)
 
 ```
-GET /users
+GET /users?page=1&limit=10
 ```
+
+**Query Parameters**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `page` | number | 1 | Page number |
+| `limit` | number | 10 | Items per page |
 
 ### 🔍 Get User by ID
 
@@ -151,6 +185,18 @@ PATCH /users/:id
 
 ```
 DELETE /users/:id
+```
+
+### ❤️ Health Check
+
+```
+GET /health
+```
+
+```json
+{
+  "status": "ok"
+}
 ```
 
 ---
@@ -180,50 +226,85 @@ DELETE /users/:id
 
 | Field | Rule |
 |---|---|
-| `firstName` | string, min length 2 |
-| `lastName` | string, min length 2 |
-| `email` | valid email |
-| `age` | integer, minimum 18 |
+| `firstName` | required, string, min 2, max 50 |
+| `lastName` | required, string, min 2, max 50 |
+| `email` | required, valid email |
+| `age` | required, integer, minimum 18 |
 | `isActive` | optional boolean |
 
----
+### 🆔 ID Validation
 
-## 🧪 Testing with Postman
+All endpoints using `:id` require a **valid UUID**.
 
-**Base URL:** `http://localhost:3000`
-
-**Example — Create User**
-
-```
-POST /users
-```
-
-```json
-{
-  "firstName": "John",
-  "lastName": "Doe",
-  "email": "john@example.com",
-  "age": 25
-}
-```
+> Invalid UUID → `400 Bad Request`
 
 ---
 
 ## ❗ Error Handling
 
-A global exception filter ensures consistent error responses across all endpoints.
+A global `HttpExceptionFilter` ensures consistent error responses.
 
 ```json
 {
   "success": false,
-  "message": [
-    "email must be an email",
-    "age must not be less than 18"
-  ],
+  "message": "User with id \"...\" not found",
   "timestamp": "2026-04-06T10:05:00.000Z",
-  "path": "/users"
+  "path": "/users/:id"
 }
 ```
+
+---
+
+## 📘 API Documentation (Swagger)
+
+Access Swagger UI at: `http://localhost:3000/api`
+
+Features:
+- Interactive API testing
+- Request/response schemas
+- Validation rules
+
+---
+
+## 🧪 Testing
+
+**Run unit tests**
+
+```bash
+npm run test
+```
+
+**Run e2e tests**
+
+```bash
+npm run test:e2e
+```
+
+**Run coverage**
+
+```bash
+npm run test:cov
+```
+
+**Test Files**
+
+| File | Purpose |
+|---|---|
+| `users.service.spec.ts` | Unit tests |
+| `app.e2e-spec.ts` | Endpoint tests |
+
+---
+
+## 🧹 Linting
+
+```bash
+npm run lint
+```
+
+Ensures:
+- Clean code
+- No unused variables
+- TypeScript best practices
 
 ---
 
@@ -233,14 +314,14 @@ A global exception filter ensures consistent error responses across all endpoint
 - ✅ Service layer handles all logic
 - ✅ DTO-based validation
 - ✅ Strict TypeScript (no `any`)
-- ✅ Clear separation of concerns
-- ✅ Consistent API response format
+- ✅ Separation of concerns
+- ✅ Consistent API responses
 
 ---
 
 ## ⚠️ Limitations
 
-- In-memory data storage (no database)
+- In-memory data storage
 - Data resets on server restart
 - No authentication or authorization
 
@@ -250,26 +331,22 @@ A global exception filter ensures consistent error responses across all endpoint
 
 - [ ] PostgreSQL + Prisma integration
 - [ ] JWT authentication
-- [ ] Pagination & filtering
-- [ ] Unit & e2e tests
-- [ ] Environment configuration (`.env`)
-- [ ] Dockerize application
+- [ ] Advanced pagination & filtering
+- [ ] Role-based access control
+- [ ] Docker support
 
 ---
 
 ## 🔗 Development Workflow
 
 1. Start the server
-2. Open Swagger UI at `http://localhost:3000/api`
+2. Open Swagger at `http://localhost:3000/api`
 3. Test endpoints via Swagger or Postman
-4. Validate edge cases (invalid input, duplicate email, etc.)
+4. Validate edge cases (invalid input, duplicates, etc.)
+5. Run tests
 
 ---
 
 ## 👨‍💻 Author
 
 Built as part of a TypeScript + NestJS backend learning project.
-
----
-
-> ⭐ This project focuses on clean backend practices and strong TypeScript fundamentals, making it a solid base for production-grade systems.
