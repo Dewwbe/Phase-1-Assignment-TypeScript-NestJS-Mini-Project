@@ -1,100 +1,110 @@
 import {
-  BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-import { CreateUserDto } from './dto/create-user.dto';
+import { Prisma, User } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { NoteResponseEntity } from '../notes/entities/note-response.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
-import type { User } from './interfaces/user.interface';
+import { UserResponseEntity } from './entities/user-response.entity';
 
 @Injectable()
 export class UsersService {
-  private readonly users: User[] = [];
+  constructor(private readonly prisma: PrismaService) {}
 
-  create(createUserDto: CreateUserDto): User {
-    const normalizedEmail = createUserDto.email.toLowerCase();
+  async findAll(
+    page = 1,
+    limit = 10,
+    includeNotes = false,
+  ): Promise<UserResponseEntity[]> {
+    const skip = (page - 1) * limit;
 
-    const existingUser = this.users.find(
-      (user: User) => user.email === normalizedEmail,
-    );
+    const users = await this.prisma.user.findMany({
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: includeNotes ? { notes: true } : undefined,
+    });
 
-    if (existingUser) {
-      throw new BadRequestException('Email already exists');
-    }
-
-    const now = new Date();
-
-    const newUser: User = {
-      id: randomUUID(),
-      firstName: createUserDto.firstName,
-      lastName: createUserDto.lastName,
-      email: normalizedEmail,
-      age: createUserDto.age,
-      isActive: createUserDto.isActive ?? true,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    this.users.push(newUser);
-
-    return newUser;
+    return users.map((user) => this.toUserResponse(user));
   }
 
-  findAll(page = 1, limit = 10): User[] {
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-
-    return this.users.slice(startIndex, endIndex);
-  }
-
-  findOne(id: string): User {
-    const user = this.users.find(
-      (existingUser: User) => existingUser.id === id,
-    );
+  async findOne(id: string, includeNotes = false): Promise<UserResponseEntity> {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: includeNotes ? { notes: true } : undefined,
+    });
 
     if (!user) {
       throw new NotFoundException(`User with id "${id}" not found`);
     }
 
-    return user;
+    return this.toUserResponse(user);
   }
 
-  update(id: string, updateUserDto: UpdateUserDto): User {
-    const user = this.findOne(id);
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<UserResponseEntity> {
+    try {
+      const updatedUser = await this.prisma.user.update({
+        where: { id },
+        data: {
+          ...updateUserDto,
+          email: updateUserDto.email?.toLowerCase(),
+        },
+      });
 
-    if (updateUserDto.email !== undefined) {
-      const normalizedEmail = updateUserDto.email.toLowerCase();
-
-      const emailTaken = this.users.some(
-        (existingUser: User) =>
-          existingUser.email === normalizedEmail && existingUser.id !== id,
-      );
-
-      if (emailTaken) {
-        throw new BadRequestException('Email already exists');
+      return this.toUserResponse(updatedUser);
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException(`User with id "${id}" not found`);
       }
 
-      updateUserDto.email = normalizedEmail;
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('Email already exists');
+      }
+
+      throw error;
     }
-
-    Object.assign(user, {
-      ...updateUserDto,
-      updatedAt: new Date(),
-    });
-
-    return user;
   }
 
-  remove(id: string): User {
-    const user = this.findOne(id);
+  async remove(id: string): Promise<UserResponseEntity> {
+    try {
+      const deletedUser = await this.prisma.user.delete({
+        where: { id },
+      });
 
-    const userIndex = this.users.findIndex(
-      (existingUser: User) => existingUser.id === user.id,
-    );
+      return this.toUserResponse(deletedUser);
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException(`User with id "${id}" not found`);
+      }
 
-    this.users.splice(userIndex, 1);
+      throw error;
+    }
+  }
 
-    return user;
+  private toUserResponse(
+    user: User & { notes?: NoteResponseEntity[] },
+  ): UserResponseEntity {
+    return {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      age: user.age,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      notes: user.notes,
+    };
   }
 }

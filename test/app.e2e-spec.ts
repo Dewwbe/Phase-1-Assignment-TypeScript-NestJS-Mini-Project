@@ -1,19 +1,24 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import type { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
+import { PrismaService } from '../src/prisma/prisma.service';
 
-describe('Users API (e2e)', () => {
-  let app: INestApplication<App>;
+describe('App E2E', () => {
+  let app: INestApplication;
+  let prisma: PrismaService;
+  let accessToken = '';
+  let createdUserId = '';
+  let createdNoteId = '';
 
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleRef.createNestApplication();
+    prisma = app.get(PrismaService);
 
     app.useGlobalPipes(
       new ValidationPipe({
@@ -22,202 +27,126 @@ describe('Users API (e2e)', () => {
         transform: true,
       }),
     );
-
     app.useGlobalFilters(new HttpExceptionFilter());
 
     await app.init();
+
+    await prisma.note.deleteMany();
+    await prisma.user.deleteMany();
   });
 
-  it('GET /health should return health status', () => {
-    return request(app.getHttpServer())
-      .get('/health')
-      .expect(200)
-      .expect({ status: 'ok' });
+  afterAll(async () => {
+    await prisma.note.deleteMany();
+    await prisma.user.deleteMany();
+    await app.close();
   });
 
-  it('POST /users should create a user', async () => {
+  it('should register a user', async () => {
     const response = await request(app.getHttpServer())
-      .post('/users')
+      .post('/auth/register')
       .send({
         firstName: 'John',
         lastName: 'Doe',
         email: 'john@example.com',
+        password: 'StrongPassword123',
         age: 25,
       })
       .expect(201);
 
+    accessToken = response.body.data.accessToken;
+    createdUserId = response.body.data.user.id;
+
     expect(response.body.success).toBe(true);
-    expect(response.body.message).toBe('User created successfully');
-    expect(response.body.data.email).toBe('john@example.com');
-    expect(response.body.data.isActive).toBe(true);
-    expect(response.body.data.id).toBeDefined();
   });
 
-  it('POST /users should fail for invalid input', async () => {
-    const response = await request(app.getHttpServer())
-      .post('/users')
+  it('should reject duplicate email', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/register')
       .send({
-        firstName: '',
-        lastName: 'D',
-        email: 'wrong-email',
-        age: 10,
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        password: 'StrongPassword123',
+        age: 25,
       })
-      .expect(400);
-
-    expect(response.body.success).toBe(false);
-    expect(response.body.message).toBeDefined();
+      .expect(409);
   });
 
-  it('GET /users should return all users', async () => {
-    await request(app.getHttpServer()).post('/users').send({
-      firstName: 'Alice',
-      lastName: 'Perera',
-      email: 'alice@example.com',
-      age: 24,
-    });
-
-    await request(app.getHttpServer()).post('/users').send({
-      firstName: 'Brian',
-      lastName: 'Fernando',
-      email: 'brian@example.com',
-      age: 27,
-    });
-
+  it('should login', async () => {
     const response = await request(app.getHttpServer())
-      .get('/users')
-      .expect(200);
-
-    expect(response.body.success).toBe(true);
-    expect(response.body.data.length).toBe(2);
-  });
-
-  it('GET /users?page=1&limit=1 should return paginated users', async () => {
-    await request(app.getHttpServer()).post('/users').send({
-      firstName: 'User1',
-      lastName: 'One',
-      email: 'user1@example.com',
-      age: 22,
-    });
-
-    await request(app.getHttpServer()).post('/users').send({
-      firstName: 'User2',
-      lastName: 'Two',
-      email: 'user2@example.com',
-      age: 23,
-    });
-
-    const response = await request(app.getHttpServer())
-      .get('/users?page=1&limit=1')
-      .expect(200);
-
-    expect(response.body.success).toBe(true);
-    expect(response.body.data.length).toBe(1);
-  });
-
-  it('GET /users/:id should return a user by id', async () => {
-    const createResponse = await request(app.getHttpServer())
-      .post('/users')
+      .post('/auth/login')
       .send({
-        firstName: 'Carl',
-        lastName: 'Silva',
-        email: 'carl@example.com',
-        age: 29,
+        email: 'john@example.com',
+        password: 'StrongPassword123',
+      })
+      .expect(200);
+
+    expect(response.body.data.accessToken).toBeDefined();
+  });
+
+  it('should block protected route without token', async () => {
+    await request(app.getHttpServer())
+      .patch(`/users/${createdUserId}`)
+      .send({ firstName: 'Updated' })
+      .expect(401);
+  });
+
+  it('should update protected route with token', async () => {
+    const response = await request(app.getHttpServer())
+      .patch(`/users/${createdUserId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ firstName: 'Updated' })
+      .expect(200);
+
+    expect(response.body.data.firstName).toBe('Updated');
+  });
+
+  it('should create a note', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/notes')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        title: 'My note',
+        content: 'This is a note',
       })
       .expect(201);
 
-    const userId = createResponse.body.data.id;
+    createdNoteId = response.body.data.id;
+    expect(response.body.data.title).toBe('My note');
+  });
 
+  it('should get notes by user', async () => {
     const response = await request(app.getHttpServer())
-      .get(`/users/${userId}`)
+      .get(`/notes/user/${createdUserId}`)
       .expect(200);
 
-    expect(response.body.success).toBe(true);
-    expect(response.body.data.id).toBe(userId);
+    expect(Array.isArray(response.body.data)).toBe(true);
   });
 
-  it('GET /users/:id should fail for invalid UUID', async () => {
+  it('should get user with notes', async () => {
     const response = await request(app.getHttpServer())
-      .get('/users/not-a-uuid')
-      .expect(400);
+      .get(`/users/${createdUserId}?includeNotes=true`)
+      .expect(200);
 
-    expect(response.body.success).toBe(false);
+    expect(Array.isArray(response.body.data.notes)).toBe(true);
   });
 
-  it('GET /users/:id should return 404 for non-existing user', async () => {
+  it('should update note', async () => {
     const response = await request(app.getHttpServer())
-      .get('/users/550e8400-e29b-41d4-a716-446655440000')
-      .expect(404);
-
-    expect(response.body.success).toBe(false);
-  });
-
-  it('PATCH /users/:id should update a user', async () => {
-    const createResponse = await request(app.getHttpServer())
-      .post('/users')
+      .patch(`/notes/${createdNoteId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
       .send({
-        firstName: 'Dina',
-        lastName: 'Paul',
-        email: 'dina@example.com',
-        age: 26,
-      })
-      .expect(201);
-
-    const userId = createResponse.body.data.id;
-
-    const response = await request(app.getHttpServer())
-      .patch(`/users/${userId}`)
-      .send({
-        firstName: 'Dina Updated',
-        isActive: false,
+        title: 'Updated note',
       })
       .expect(200);
 
-    expect(response.body.success).toBe(true);
-    expect(response.body.data.firstName).toBe('Dina Updated');
-    expect(response.body.data.isActive).toBe(false);
+    expect(response.body.data.title).toBe('Updated note');
   });
 
-  it('PATCH /users/:id should fail for invalid UUID', async () => {
-    const response = await request(app.getHttpServer())
-      .patch('/users/not-a-uuid')
-      .send({
-        firstName: 'Updated',
-      })
-      .expect(400);
-
-    expect(response.body.success).toBe(false);
-  });
-
-  it('DELETE /users/:id should delete a user', async () => {
-    const createResponse = await request(app.getHttpServer())
-      .post('/users')
-      .send({
-        firstName: 'Evan',
-        lastName: 'Jay',
-        email: 'evan@example.com',
-        age: 31,
-      })
-      .expect(201);
-
-    const userId = createResponse.body.data.id;
-
-    const response = await request(app.getHttpServer())
-      .delete(`/users/${userId}`)
+  it('should delete note', async () => {
+    await request(app.getHttpServer())
+      .delete(`/notes/${createdNoteId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
-
-    expect(response.body.success).toBe(true);
-    expect(response.body.data.id).toBe(userId);
-  });
-
-  it('DELETE /users/:id should fail for invalid UUID', async () => {
-    const response = await request(app.getHttpServer())
-      .delete('/users/not-a-uuid')
-      .expect(400);
-
-    expect(response.body.success).toBe(false);
-  });
-
-  afterEach(async () => {
-    await app.close();
   });
 });

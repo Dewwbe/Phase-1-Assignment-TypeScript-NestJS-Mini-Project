@@ -1,26 +1,25 @@
 import {
   Body,
   Controller,
-  DefaultValuePipe,
   Delete,
   Get,
   Param,
-  ParseIntPipe,
-  ParseUUIDPipe,
   Patch,
-  Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiQuery,
   ApiResponse as SwaggerApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import type { ApiResponse } from '../common/interfaces/api-response.interface';
-import { CreateUserDto } from './dto/create-user.dto';
+import { JwtAuthGuard } from '../auth/auth.guard';
+import { ApiResponse } from '../common/interfaces/api-response.interface';
 import { UpdateUserDto } from './dto/update-user.dto';
-import type { User } from './interfaces/user.interface';
+import { UserQueryDto } from './dto/user-query.dto';
+import { UserResponseEntity } from './entities/user-response.entity';
 import { UsersService } from './users.service';
 
 @ApiTags('users')
@@ -28,32 +27,23 @@ import { UsersService } from './users.service';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post()
-  @ApiOperation({ summary: 'Create a user' })
-  @SwaggerApiResponse({ status: 201, description: 'User created successfully' })
-  create(@Body() createUserDto: CreateUserDto): ApiResponse<User> {
-    const user = this.usersService.create(createUserDto);
-
-    return {
-      success: true,
-      message: 'User created successfully',
-      data: user,
-    };
-  }
-
   @Get()
   @ApiOperation({ summary: 'Get users with pagination' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
+  @ApiQuery({ name: 'includeNotes', required: false, example: false })
   @SwaggerApiResponse({
     status: 200,
     description: 'Users retrieved successfully',
   })
-  findAll(
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
-  ): ApiResponse<User[]> {
-    const users = this.usersService.findAll(page, limit);
+  async findAll(
+    @Query() query: UserQueryDto,
+  ): Promise<ApiResponse<UserResponseEntity[]>> {
+    const users = await this.usersService.findAll(
+      query.page,
+      query.limit,
+      query.includeNotes,
+    );
 
     return {
       success: true,
@@ -64,12 +54,12 @@ export class UsersController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get user by id' })
-  @SwaggerApiResponse({
-    status: 200,
-    description: 'User retrieved successfully',
-  })
-  findOne(@Param('id', new ParseUUIDPipe()) id: string): ApiResponse<User> {
-    const user = this.usersService.findOne(id);
+  @ApiQuery({ name: 'includeNotes', required: false, example: false })
+  async findOne(
+    @Param('id') id: string,
+    @Query('includeNotes') includeNotes?: string,
+  ): Promise<ApiResponse<UserResponseEntity>> {
+    const user = await this.usersService.findOne(id, includeNotes === 'true');
 
     return {
       success: true,
@@ -79,13 +69,14 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a user partially' })
-  @SwaggerApiResponse({ status: 200, description: 'User updated successfully' })
-  update(
-    @Param('id', new ParseUUIDPipe()) id: string,
+  async update(
+    @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
-  ): ApiResponse<User> {
-    const updatedUser = this.usersService.update(id, updateUserDto);
+  ): Promise<ApiResponse<UserResponseEntity>> {
+    const updatedUser = await this.usersService.update(id, updateUserDto);
 
     return {
       success: true,
@@ -95,10 +86,11 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a user' })
-  @SwaggerApiResponse({ status: 200, description: 'User deleted successfully' })
-  remove(@Param('id', new ParseUUIDPipe()) id: string): ApiResponse<User> {
-    const deletedUser = this.usersService.remove(id);
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete user' })
+  async remove(@Param('id') id: string): Promise<ApiResponse<UserResponseEntity>> {
+    const deletedUser = await this.usersService.remove(id);
 
     return {
       success: true,

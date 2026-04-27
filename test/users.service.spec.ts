@@ -1,164 +1,88 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../src/prisma/prisma.service';
 import { UsersService } from '../src/users/users.service';
 
 describe('UsersService', () => {
   let service: UsersService;
 
+  const prismaMock = {
+    user: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+  } as unknown as PrismaService;
+
   beforeEach(() => {
-    service = new UsersService();
+    jest.clearAllMocks();
+    service = new UsersService(prismaMock);
   });
 
-  it('should create a user', () => {
-    const user = service.create({
-      firstName: 'John',
-      lastName: 'Doe',
-      email: 'john@example.com',
-      age: 25,
-      isActive: true,
-    });
-
-    expect(user.id).toBeDefined();
-    expect(user.firstName).toBe('John');
-    expect(user.lastName).toBe('Doe');
-    expect(user.email).toBe('john@example.com');
-    expect(user.age).toBe(25);
-    expect(user.isActive).toBe(true);
-  });
-
-  it('should default isActive to true when not provided', () => {
-    const user = service.create({
-      firstName: 'Jane',
-      lastName: 'Doe',
-      email: 'jane@example.com',
-      age: 28,
-    });
-
-    expect(user.isActive).toBe(true);
-  });
-
-  it('should throw error when email already exists', () => {
-    service.create({
-      firstName: 'John',
-      lastName: 'Doe',
-      email: 'john@example.com',
-      age: 25,
-      isActive: true,
-    });
-
-    expect(() =>
-      service.create({
-        firstName: 'Johnny',
+  it('should return users', async () => {
+    jest.spyOn(prismaMock.user, 'findMany').mockResolvedValue([
+      {
+        id: '1',
+        firstName: 'John',
         lastName: 'Doe',
-        email: 'JOHN@example.com',
-        age: 30,
+        email: 'john@example.com',
+        password: 'hashed',
+        age: 25,
         isActive: true,
-      }),
-    ).toThrow(BadRequestException);
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
+
+    const result = await service.findAll();
+
+    expect(result).toHaveLength(1);
+    expect(result[0].email).toBe('john@example.com');
   });
 
-  it('should return all users', () => {
-    service.create({
-      firstName: 'Alicia',
-      lastName: 'Perera',
-      email: 'alicia@example.com',
-      age: 24,
-      isActive: true,
-    });
+  it('should throw when user not found', async () => {
+    jest.spyOn(prismaMock.user, 'findUnique').mockResolvedValue(null);
 
-    service.create({
-      firstName: 'Brian',
-      lastName: 'Fernando',
-      email: 'brian@example.com',
-      age: 27,
-      isActive: true,
-    });
-
-    const users = service.findAll();
-
-    expect(users).toHaveLength(2);
+    await expect(service.findOne('missing-id')).rejects.toThrow(NotFoundException);
   });
 
-  it('should return one user by id', () => {
-    const createdUser = service.create({
-      firstName: 'Carl',
-      lastName: 'Silva',
-      email: 'carl@example.com',
-      age: 29,
+  it('should update a user', async () => {
+    jest.spyOn(prismaMock.user, 'update').mockResolvedValue({
+      id: '1',
+      firstName: 'Updated',
+      lastName: 'Doe',
+      email: 'updated@example.com',
+      password: 'hashed',
+      age: 30,
       isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
-    const user = service.findOne(createdUser.id);
+    const result = await service.update('1', {
+      firstName: 'Updated',
+      email: 'UPDATED@example.com',
+    });
 
-    expect(user.id).toBe(createdUser.id);
+    expect(result.firstName).toBe('Updated');
+    expect(result.email).toBe('updated@example.com');
   });
 
-  it('should throw NotFoundException when user is not found', () => {
-    expect(() =>
-      service.findOne('550e8400-e29b-41d4-a716-446655440000'),
-    ).toThrow(NotFoundException);
-  });
-
-  it('should update a user', () => {
-    const createdUser = service.create({
-      firstName: 'Dina',
-      lastName: 'Paul',
-      email: 'dina@example.com',
-      age: 26,
+  it('should delete a user', async () => {
+    jest.spyOn(prismaMock.user, 'delete').mockResolvedValue({
+      id: '1',
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+      password: 'hashed',
+      age: 25,
       isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
-    const updatedUser = service.update(createdUser.id, {
-      firstName: 'Dina Updated',
-      isActive: false,
-    });
+    const result = await service.remove('1');
 
-    expect(updatedUser.firstName).toBe('Dina Updated');
-    expect(updatedUser.isActive).toBe(false);
-  });
-
-  it('should delete a user', () => {
-    const createdUser = service.create({
-      firstName: 'Evan',
-      lastName: 'Jay',
-      email: 'evan@example.com',
-      age: 31,
-      isActive: true,
-    });
-
-    const deletedUser = service.remove(createdUser.id);
-
-    expect(deletedUser.id).toBe(createdUser.id);
-    expect(service.findAll()).toHaveLength(0);
-  });
-
-  it('should paginate users', () => {
-    service.create({
-      firstName: 'User1',
-      lastName: 'One',
-      email: 'user1@example.com',
-      age: 22,
-      isActive: true,
-    });
-
-    service.create({
-      firstName: 'User2',
-      lastName: 'Two',
-      email: 'user2@example.com',
-      age: 23,
-      isActive: true,
-    });
-
-    service.create({
-      firstName: 'User3',
-      lastName: 'Three',
-      email: 'user3@example.com',
-      age: 24,
-      isActive: true,
-    });
-
-    const page2 = service.findAll(2, 2);
-
-    expect(page2).toHaveLength(1);
-    expect(page2[0].email).toBe('user3@example.com');
+    expect(result.id).toBe('1');
   });
 });

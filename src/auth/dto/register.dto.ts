@@ -11,7 +11,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-export class CreateUserDto {
+export class RegisterDto {
   @ApiProperty({ example: 'John', minLength: 2, maxLength: 50 })
   @IsString()
   @IsNotEmpty()
@@ -35,6 +35,12 @@ export class CreateUserDto {
   @IsInt()
   @Min(18)
   age!: number;
+
+  @ApiProperty({ example: 'StrongPassword123', minLength: 8 })
+  @IsString()
+  @MinLength(8)
+  @MaxLength(100)
+  password!: string;
 
   @ApiPropertyOptional({ example: true, default: true })
   @IsOptional()
