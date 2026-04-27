@@ -1,352 +1,273 @@
-# 🚀 User Management API
+# 🚀 User Management API (Phase 2 – Production Backend)
 
-A clean, scalable REST API built with **NestJS** and **TypeScript**, demonstrating strong backend fundamentals, validation, and clean architecture.
+A scalable, production-ready REST API built with NestJS, Prisma, and PostgreSQL, featuring JWT authentication, role-secured endpoints, and comprehensive testing.
 
 ---
 
 ## 📌 Overview
 
-This project implements a **User Management system** with full CRUD functionality.
+This project is an enhanced version of the initial user management system, upgraded to include:
 
-### Key Features
+- 🔐 Authentication & Authorization (JWT)
+- 🗄 Database integration (PostgreSQL + Prisma)
+- 📝 Notes management (user-based resource ownership)
+- 🧪 Unit & End-to-End testing
+- 📘 Swagger API documentation
 
-- ✅ Strong TypeScript practices (strict mode, no `any`)
-- ✅ Clean architecture (Controller → Service → DTO)
-- ✅ DTO-based validation
-- ✅ Centralized error handling
-- ✅ Consistent API response structure
-- ✅ Swagger API documentation
-- ✅ Pagination support
-- ✅ UUID validation
-- ✅ Environment configuration
-- ✅ Unit & E2E testing
+---
+
+## ✨ Key Features
+
+- ✅ JWT-based authentication
+- ✅ Protected routes using Guards
+- ✅ Password hashing with bcrypt
+- ✅ Prisma ORM with PostgreSQL
+- ✅ User–Note relational data model
+- ✅ DTO validation with class-validator
+- ✅ Global exception handling
+- ✅ Consistent API response format
+- ✅ Pagination & filtering
+- ✅ Swagger documentation
+- ✅ Unit testing (Jest)
+- ✅ E2E testing (Supertest)
 
 ---
 
 ## 🛠 Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | NestJS |
-| Language | TypeScript (strict mode) |
-| Validation | class-validator, class-transformer |
-| Documentation | Swagger |
-| Config | @nestjs/config |
-| Testing | Jest, Supertest |
-| Runtime | Node.js |
+| Layer      | Technology          |
+|------------|---------------------|
+| Framework  | NestJS              |
+| Language   | TypeScript          |
+| Database   | PostgreSQL          |
+| ORM        | Prisma              |
+| Auth       | JWT + Passport      |
+| Validation | class-validator     |
+| Testing    | Jest + Supertest    |
+| Docs       | Swagger             |
 
 ---
 
 ## 📁 Project Structure
-
-```
 src/
-├── main.ts
+├── auth/                # Authentication (JWT)
+├── users/               # User module
+├── notes/               # Notes module
+├── prisma/              # Prisma service
+├── common/              # Filters, interceptors
+├── config/              # Env validation
 ├── app.module.ts
-├── common/
-│   ├── filters/
-│   │   └── http-exception.filter.ts
-│   └── interfaces/
-│       └── api-response.interface.ts
-└── users/
-    ├── dto/
-    │   ├── create-user.dto.ts
-    │   └── update-user.dto.ts
-    ├── interfaces/
-    │   └── user.interface.ts
-    ├── users.controller.ts
-    ├── users.service.ts
-    └── users.module.ts
-
+├── main.ts
 test/
-├── app.e2e-spec.ts
-└── users.service.spec.ts
-
-.env.example
-.gitignore
-```
+├── app.e2e-spec.ts      # E2E tests
+├── users.service.spec.ts
+├── notes.service.spec.ts
 
 ---
 
-## ⚙️ Installation
+## 🔐 Authentication Flow
 
-**1. Clone the repository**
-
-```bash
-git clone <your-repo-url>
-cd user-management-api
-```
-
-**2. Install dependencies**
-
-```bash
-npm install
-```
-
-**3. Install required packages**
-
-```bash
-npm install class-validator class-transformer @nestjs/swagger swagger-ui-express @nestjs/config
-```
+1. User registers → password hashed using **bcrypt**
+2. User logs in → **JWT token** generated
+3. Token sent in header:
+Authorization: Bearer <token>
+4. Protected routes use `JwtAuthGuard`
 
 ---
 
-## 🔐 Environment Variables
+## 🗄 Database Schema (Prisma)
 
-Create a `.env` file in the root directory:
+**User**
+- `id` (UUID)
+- `email` (unique)
+- `password` (hashed)
+- `notes` (relation)
+
+**Note**
+- `id`
+- `title`
+- `content`
+- `userId` (FK)
+
+---
+
+## ⚙️ Environment Variables
+
+Create a `.env` file:
 
 ```env
 PORT=3000
+DATABASE_URL="postgresql://postgres:password@localhost:5432/db"
+JWT_SECRET="this_is_a_secure_secret_123"
+JWT_EXPIRES_IN="1d"
+NODE_ENV=development
 ```
-
-A sample file is provided as `.env.example`.
-
-> ⚠️ Do not commit `.env` to Git (already ignored via `.gitignore`)
 
 ---
 
 ## ▶️ Running the Application
 
-**Development**
-
 ```bash
+npm install
+npx prisma generate
+npx prisma migrate dev
 npm run start:dev
 ```
 
-**Production**
+### 🌐 URLs
 
-```bash
-npm run build
-npm run start
-```
-
----
-
-## 🌐 Application URLs
-
-| Service | URL |
-|---|---|
-| API | http://localhost:3000 |
-| Swagger UI | http://localhost:3000/api |
+| Service | URL                          |
+|---------|------------------------------|
+| API     | http://localhost:3000        |
+| Swagger | http://localhost:3000/api    |
 
 ---
 
 ## 📬 API Endpoints
 
-### ➕ Create User
+### 🔐 Auth
 
-```
-POST /users
-```
+| Method | Endpoint         | Description   |
+|--------|------------------|---------------|
+| POST   | /auth/register   | Register user |
+| POST   | /auth/login      | Login user    |
 
-```json
-{
-  "firstName": "Alice",
-  "lastName": "Perera",
-  "email": "alice@example.com",
-  "age": 24,
-  "isActive": true
-}
-```
+### 👤 Users
 
-### 📥 Get All Users (with Pagination)
+| Method | Endpoint      |
+|--------|---------------|
+| GET    | /users        |
+| GET    | /users/:id    |
+| PATCH  | /users/:id 🔒 |
+| DELETE | /users/:id 🔒 |
 
-```
-GET /users?page=1&limit=10
-```
+### 📝 Notes
 
-**Query Parameters**
+| Method | Endpoint              |
+|--------|-----------------------|
+| POST   | /notes 🔒             |
+| GET    | /notes                |
+| GET    | /notes/:id            |
+| GET    | /notes/user/:userId   |
+| PATCH  | /notes/:id 🔒         |
+| DELETE | /notes/:id 🔒         |
 
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `page` | number | 1 | Page number |
-| `limit` | number | 10 | Items per page |
-
-### 🔍 Get User by ID
-
-```
-GET /users/:id
-```
-
-### ✏️ Update User (Partial)
-
-```
-PATCH /users/:id
-```
-
-```json
-{
-  "firstName": "Updated Name",
-  "isActive": false
-}
-```
-
-### ❌ Delete User
-
-```
-DELETE /users/:id
-```
-
-### ❤️ Health Check
-
-```
-GET /health
-```
-
-```json
-{
-  "status": "ok"
-}
-```
+> 🔒 = Requires JWT token
 
 ---
 
-## 📦 Sample Success Response
+## 🧪 Testing
+
+### Run Unit Tests
+
+```bash
+npm run test
+```
+
+- ✔ Tests service logic using mocked Prisma
+- ✔ Example: `UsersService`, `NotesService`
+
+### Run E2E Tests
+
+```bash
+npm run test:e2e
+```
+
+- ✔ Tests full system (API → DB → Auth → Response)
+
+### E2E Test Coverage
+
+- ✔ Register user
+- ✔ Duplicate email rejection (409)
+- ✔ Login user
+- ✔ Unauthorized access (401)
+- ✔ Authorized access with JWT
+- ✔ Create note
+- ✔ Get notes
+- ✔ Update note
+- ✔ Delete note
+
+### ⚠️ Important Testing Behavior
+
+During E2E tests, you may see logs like:
+409 Conflict (duplicate email)
+401 Unauthorized
+
+These are **expected** and verify:
+- ✔ Error handling works
+- ✔ JWT protection works
+
+---
+
+## 📘 Swagger API Docs
+
+**URL:** http://localhost:3000/api
+
+Features:
+- Interactive testing
+- Request validation
+- JWT authentication testing
+
+---
+
+## 📦 Sample Response
 
 ```json
 {
   "success": true,
-  "message": "User created successfully",
+  "message": "Login successful",
   "data": {
-    "id": "uuid",
-    "firstName": "Alice",
-    "lastName": "Perera",
-    "email": "alice@example.com",
-    "age": 24,
-    "isActive": true,
-    "createdAt": "2026-04-06T10:00:00.000Z",
-    "updatedAt": "2026-04-06T10:00:00.000Z"
+    "accessToken": "jwt_token",
+    "user": {
+      "id": "uuid",
+      "email": "john@example.com"
+    }
   }
 }
 ```
 
 ---
 
-## ⚠️ Validation Rules
+## 🔒 Security Features
 
-| Field | Rule |
-|---|---|
-| `firstName` | required, string, min 2, max 50 |
-| `lastName` | required, string, min 2, max 50 |
-| `email` | required, valid email |
-| `age` | required, integer, minimum 18 |
-| `isActive` | optional boolean |
-
-### 🆔 ID Validation
-
-All endpoints using `:id` require a **valid UUID**.
-
-> Invalid UUID → `400 Bad Request`
-
----
-
-## ❗ Error Handling
-
-A global `HttpExceptionFilter` ensures consistent error responses.
-
-```json
-{
-  "success": false,
-  "message": "User with id \"...\" not found",
-  "timestamp": "2026-04-06T10:05:00.000Z",
-  "path": "/users/:id"
-}
-```
-
----
-
-## 📘 API Documentation (Swagger)
-
-Access Swagger UI at: `http://localhost:3000/api`
-
-Features:
-- Interactive API testing
-- Request/response schemas
-- Validation rules
-
----
-
-## 🧪 Testing
-
-**Run unit tests**
-
-```bash
-npm run test
-```
-
-**Run e2e tests**
-
-```bash
-npm run test:e2e
-```
-
-**Run coverage**
-
-```bash
-npm run test:cov
-```
-
-**Test Files**
-
-| File | Purpose |
-|---|---|
-| `users.service.spec.ts` | Unit tests |
-| `app.e2e-spec.ts` | Endpoint tests |
-
----
-
-## 🧹 Linting
-
-```bash
-npm run lint
-```
-
-Ensures:
-- Clean code
-- No unused variables
-- TypeScript best practices
+- Password hashing (bcrypt)
+- JWT authentication
+- Protected routes
+- Input validation
+- Ownership validation (notes)
 
 ---
 
 ## 🧠 Design Principles
 
-- ✅ Thin controllers (no business logic)
-- ✅ Service layer handles all logic
-- ✅ DTO-based validation
-- ✅ Strict TypeScript (no `any`)
-- ✅ Separation of concerns
-- ✅ Consistent API responses
+- Thin controllers
+- Service-based logic
+- DTO validation
+- Separation of concerns
+- Clean architecture
+- Production-ready structure
 
 ---
 
-## ⚠️ Limitations
+## 🚀 Improvements from Phase 1
 
-- In-memory data storage
-- Data resets on server restart
-- No authentication or authorization
-
----
-
-## 🚧 Future Improvements
-
-- [ ] PostgreSQL + Prisma integration
-- [ ] JWT authentication
-- [ ] Advanced pagination & filtering
-- [ ] Role-based access control
-- [ ] Docker support
+| Feature              | Phase 1       | Phase 2         |
+|----------------------|---------------|-----------------|
+| Database             | ❌ In-memory   | ✅ PostgreSQL    |
+| Auth                 | ❌ None        | ✅ JWT           |
+| Security             | ❌             | ✅ Guards        |
+| Relationships        | ❌             | ✅ User–Notes    |
+| Testing              | Basic          | Full E2E        |
+| Production readiness | ❌             | ✅               |
 
 ---
 
-## 🔗 Development Workflow
+## 🎤 Viva Explanation (Short)
 
-1. Start the server
-2. Open Swagger at `http://localhost:3000/api`
-3. Test endpoints via Swagger or Postman
-4. Validate edge cases (invalid input, duplicates, etc.)
-5. Run tests
+This is a production-ready NestJS backend with JWT authentication, Prisma ORM, and PostgreSQL. It includes secure endpoints, user-note relationships, validation, and full unit and E2E testing using Jest and Supertest.
 
 ---
 
 ## 👨‍💻 Author
 
-Built as part of a TypeScript + NestJS backend learning project.
+Built as part of **Efutures Phase 2 Backend Development Assignment**.
